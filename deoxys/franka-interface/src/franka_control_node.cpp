@@ -281,6 +281,15 @@ int main(int argc, char **argv) {
         Eigen::VectorXd::Map(init_state.q_d.data(), 7);
     goal_state_info->joint_positions = current_state_info->joint_positions;
 
+    // ************ Initialize twist velocities to zero ************ //
+    current_state_info->twist_trans_EE_in_base_frame = Eigen::Vector3d::Zero();
+    current_state_info->twist_rot_EE_in_base_frame = Eigen::Vector3d::Zero();
+    current_state_info->joint_velocities = Eigen::Matrix<double, 7, 1>::Zero();
+
+    goal_state_info->twist_trans_EE_in_base_frame = Eigen::Vector3d::Zero(); 
+    goal_state_info->twist_rot_EE_in_base_frame = Eigen::Vector3d::Zero();
+    goal_state_info->joint_velocities = Eigen::Matrix<double, 7, 1>::Zero();
+
     // Log information about current arm control frequency
     global_handler->logger->info(
         "State Publisher: {0}Hz, Policy: {1}Hz, Traj Interpolation {2}Hz, ZMQ "

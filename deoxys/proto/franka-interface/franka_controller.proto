@@ -25,6 +25,15 @@ message Goal {
   double ax = 5;
   double ay = 6;
   double az = 7;
+
+  // ***** CZY add velocity and angular velocity ***** //
+  double vx = 8;
+  double vy = 9;
+  double vz = 10;
+  
+  double wx = 11;
+  double wy = 12;
+  double wz = 13;
 }
 
 // Franka State Estimator Configuration

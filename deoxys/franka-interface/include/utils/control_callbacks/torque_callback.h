@@ -28,6 +28,17 @@ CreateTorqueFromCartesianSpaceCallback(
     std::chrono::high_resolution_clock::time_point t1 =
         std::chrono::high_resolution_clock::now();
 
+    // Get the Jacobian matrix
+    std::array<double, 42> jacobian_array =
+    model.zeroJacobian(franka::Frame::kEndEffector, robot_state);
+    Eigen::Map<const Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
+
+    Eigen::MatrixXd jacobian_pos(3, 7);
+    Eigen::MatrixXd jacobian_ori(3, 7);
+    jacobian_pos << jacobian.block(0, 0, 3, 7);
+    jacobian_ori << jacobian.block(3, 0, 3, 7);
+
+    // Get the current state
     current_state_info->joint_positions =
         Eigen::VectorXd::Map(robot_state.q.data(), 7);
     Eigen::Affine3d current_T_EE_in_base_frame(
@@ -36,6 +47,9 @@ CreateTorqueFromCartesianSpaceCallback(
         << current_T_EE_in_base_frame.translation();
     current_state_info->quat_EE_in_base_frame =
         Eigen::Quaterniond(current_T_EE_in_base_frame.linear());
+    Eigen::Matrix<double, 7, 1> current_dq = Eigen::VectorXd::Map(robot_state.dq.data(), 7);
+    current_state_info->twist_trans_EE_in_base_frame = jacobian_pos * current_dq;
+    current_state_info->twist_rot_EE_in_base_frame = jacobian_ori * current_dq;
 
     if (!global_handler->running) {
       franka::Torques zero_torques{{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
@@ -55,7 +69,10 @@ CreateTorqueFromCartesianSpaceCallback(
 
     Eigen::Vector3d desired_pos_EE_in_base_frame;
     Eigen::Quaterniond desired_quat_EE_in_base_frame;
+    Eigen::Vector3d desired_twist_trans_EE_in_base_frame;
+    Eigen::Vector3d desired_twist_rot_EE_in_base_frame;
 
+    // TODO: add velocity interpolation here
     global_handler->traj_interpolator_ptr->GetNextStep(
         global_handler->time, desired_pos_EE_in_base_frame,
         desired_quat_EE_in_base_frame);
@@ -63,8 +80,8 @@ CreateTorqueFromCartesianSpaceCallback(
     state_publisher->UpdateNewState(robot_state, &model);
 
     tau_d_array = global_handler->controller_ptr->Step(
-        robot_state, desired_pos_EE_in_base_frame,
-        desired_quat_EE_in_base_frame);
+        robot_state, desired_pos_EE_in_base_frame, desired_quat_EE_in_base_frame,
+        desired_twist_trans_EE_in_base_frame, desired_twist_rot_EE_in_base_frame);
 
     std::array<double, 7> tau_d_rate_limited = franka::limitRate(
         franka::kMaxTorqueRate, tau_d_array, robot_state.tau_J_d);

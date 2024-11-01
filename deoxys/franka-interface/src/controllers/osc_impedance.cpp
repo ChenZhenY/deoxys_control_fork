@@ -88,6 +88,35 @@ void OSCImpedanceController::ComputeGoal(
     goal_state_info->quat_EE_in_base_frame =
         Eigen::Quaterniond(relative_axis_angle.toRotationMatrix() *
                            current_state_info->quat_EE_in_base_frame);
+
+    // ***** CZY add velocity and angular velocity ***** //
+    // Get transformation matrix from current state
+    Eigen::Matrix3d current_rotation = current_state_info->quat_EE_in_base_frame.toRotationMatrix();
+    Eigen::Vector3d current_translation = current_state_info->pos_EE_in_base_frame;
+    // Construct transformation matrix
+    Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+    T.block<3,3>(0,0) = current_rotation;
+    T.block<3,1>(0,3) = current_translation;
+    // Construct the adjoint matrix
+    Eigen::Matrix<double, 6, 6> adjT = Eigen::Matrix<double, 6, 6>::Identity();
+    adjT.block<3,3>(0,0) = current_rotation;
+    adjT.block<3,3>(3,3) = current_rotation;
+    // Get skew matrix from current translation
+    Eigen::Matrix3d skew_translation;
+    skew_translation << 0, -current_translation(2), current_translation(1),
+                       current_translation(2), 0, -current_translation(0),
+                       -current_translation(1), current_translation(0), 0;
+    adjT.block<3,3>(0,3) = current_rotation * skew_translation;
+
+    // Compute the desired velocity in base frame
+    Eigen::Vector6d desired_twist_in_local_frame;
+    desired_twist_in_local_frame << control_msg_.goal().vx(), control_msg_.goal().vy(), control_msg_.goal().vz(),
+                                    control_msg_.goal().wx(), control_msg_.goal().wy(), control_msg_.goal().wz();
+    Eigen::Vector6d desired_twist_in_base_frame = adjT * desired_twist_in_local_frame;
+    goal_state_info->twist_trans_EE_in_base_frame << desired_twist_in_base_frame.head<3>();
+    goal_state_info->twist_rot_EE_in_base_frame << desired_twist_in_base_frame.tail<3>();
+    // ************************************************* //
+
   } else {
     goal_state_info->pos_EE_in_base_frame = Eigen::Vector3d(
         control_msg_.goal().x(),
@@ -101,13 +130,19 @@ void OSCImpedanceController::ComputeGoal(
     AxisAngle(absolute_ori, absolute_axis_angle);
     goal_state_info->quat_EE_in_base_frame =
         Eigen::Quaterniond(absolute_axis_angle);
+    // ***** CZY add velocity and angular velocity ***** //
+    goal_state_info->twist_trans_EE_in_base_frame << control_msg_.goal().vx(), control_msg_.goal().vy(), control_msg_.goal().vz();
+    goal_state_info->twist_rot_EE_in_base_frame << control_msg_.goal().wx(), control_msg_.goal().wy(), control_msg_.goal().wz();
+    // ************************************************* //
   }
 }
 
 std::array<double, 7> OSCImpedanceController::Step(
     const franka::RobotState &robot_state,
     const Eigen::Vector3d &desired_pos_EE_in_base_frame,
-    const Eigen::Quaterniond &desired_quat_EE_in_base_frame) {
+    const Eigen::Quaterniond &desired_quat_EE_in_base_frame,
+    const Eigen::Vector3d &desired_twist_trans_EE_in_base_frame,
+    const Eigen::Vector3d &desired_twist_rot_EE_in_base_frame) {
 
   std::chrono::high_resolution_clock::time_point t1 =
       std::chrono::high_resolution_clock::now();
@@ -179,6 +214,16 @@ std::array<double, 7> OSCImpedanceController::Step(
   ori_error << quat_error.x(), quat_error.y(), quat_error.z();
   ori_error << -T_EE_in_base_frame.linear() * ori_error;
 
+  // ***** CZY add velocity and angular velocity ***** //
+  Eigen::Vector3d vel_error;
+  vel_error << desired_twist_trans_EE_in_base_frame - (jacobian_pos * current_dq);
+
+  // TODO: add angular velocity error later
+  Eigen::Vector3d ang_vel_error;
+  ang_vel_error << desired_twist_rot_EE_in_base_frame - (jacobian_ori * current_dq);
+  ang_vel_error.setZero();
+  // ************************************************* //
+
   // Compute matrices
   Eigen::Matrix<double, 7, 7> M_inv(M.inverse());
   Eigen::MatrixXd Lambda_inv(6, 6);
@@ -210,10 +255,10 @@ std::array<double, 7> OSCImpedanceController::Step(
 
   tau_d << jacobian_pos.transpose() *
                    (Lambda_pos *
-                    (Kp_p * pos_error - Kd_p * (jacobian_pos * current_dq))) +
+                    (Kp_p * pos_error - Kd_p * vel_error)) +
                jacobian_ori.transpose() *
                    (Lambda_ori *
-                    (Kp_r * ori_error - Kd_r * (jacobian_ori * current_dq)));
+                    (Kp_r * ori_error - Kd_r * ang_vel_error));
 
   // nullspace control
   tau_d << tau_d + Nullspace * (static_q_task_ - current_q);
