@@ -164,6 +164,7 @@ message FrankaControlMessage {
     LINEAR_JOINT_POSITION = 6;
     COSINE_CARTESIAN_VELOCITY = 7;
     LINEAR_CARTESIAN_VELOCITY = 8;
+    LINEAR_POSE_TWIST = 9;
   }
   TrajInterpolatorType traj_interpolator_type = 3;
   double traj_interpolator_time_fraction = 4;
