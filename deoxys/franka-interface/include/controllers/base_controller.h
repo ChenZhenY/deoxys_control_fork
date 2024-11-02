@@ -40,6 +40,12 @@ public:
                                             const Eigen::Vector3d &,
                                             const Eigen::Quaterniond &){};
 
+  // For pose and twist
+  inline virtual std::array<double, 7> Step(const franka::RobotState &,
+                                            const Eigen::Vector3d &,
+                                            const Eigen::Quaterniond &,
+                                            const Eigen::Vector3d &,
+                                            const Eigen::Vector3d &){};
   // For cartesian velocity
   inline virtual std::array<double, 6> Step(const franka::RobotState &,
                                             const Eigen::Vector3d &,

@@ -109,10 +109,10 @@ void OSCImpedanceController::ComputeGoal(
     adjT.block<3,3>(0,3) = current_rotation * skew_translation;
 
     // Compute the desired velocity in base frame
-    Eigen::Vector6d desired_twist_in_local_frame;
+    Eigen::Matrix<double, 6, 1> desired_twist_in_local_frame;
     desired_twist_in_local_frame << control_msg_.goal().vx(), control_msg_.goal().vy(), control_msg_.goal().vz(),
-                                    control_msg_.goal().wx(), control_msg_.goal().wy(), control_msg_.goal().wz();
-    Eigen::Vector6d desired_twist_in_base_frame = adjT * desired_twist_in_local_frame;
+                                   control_msg_.goal().wx(), control_msg_.goal().wy(), control_msg_.goal().wz();
+    Eigen::Matrix<double, 6, 1> desired_twist_in_base_frame = adjT * desired_twist_in_local_frame;
     goal_state_info->twist_trans_EE_in_base_frame << desired_twist_in_base_frame.head<3>();
     goal_state_info->twist_rot_EE_in_base_frame << desired_twist_in_base_frame.tail<3>();
     // ************************************************* //

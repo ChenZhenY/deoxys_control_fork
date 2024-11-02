@@ -546,11 +546,12 @@ int main(int argc, char **argv) {
                 global_handler->time, current_state_info->pos_EE_in_base_frame,
                 current_state_info->quat_EE_in_base_frame,
                 goal_state_info->pos_EE_in_base_frame,
-                goal_state_info->quat_EE_in_base_frame, policy_rate, traj_rate,
+                goal_state_info->quat_EE_in_base_frame,
                 current_state_info->twist_trans_EE_in_base_frame,
                 current_state_info->twist_rot_EE_in_base_frame,
                 goal_state_info->twist_trans_EE_in_base_frame,
                 goal_state_info->twist_rot_EE_in_base_frame,
+                policy_rate, traj_rate,
                 global_handler->traj_interpolator_time_fraction);
             break;
           default:

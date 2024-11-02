@@ -33,7 +33,9 @@ public:
 
   std::array<double, 7> Step(const franka::RobotState &,
                              const Eigen::Vector3d &,
-                             const Eigen::Quaterniond &);
+                             const Eigen::Quaterniond &,
+                             const Eigen::Vector3d &,
+                             const Eigen::Vector3d &);
 };
 } // namespace controller
 
