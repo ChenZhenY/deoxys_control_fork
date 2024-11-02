@@ -1,9 +1,9 @@
 controller_type: OSC_POSE
 
-is_delta: true
+is_delta: false
 
 traj_interpolator_cfg:
-  traj_interpolator_type: LINEAR_POSE
+  traj_interpolator_type: LINEAR_POSE_TWIST
   time_fraction: 0.3
 
 Kp:

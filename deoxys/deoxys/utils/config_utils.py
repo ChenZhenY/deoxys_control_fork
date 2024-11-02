@@ -160,7 +160,7 @@ def verify_controller_config(controller_cfg: dict, use_default=True):
         # Trajectory interpolation
         if not check_attr(controller_cfg, "traj_interpolator_cfg"):
             controller_cfg["traj_interpolator_cfg"] = {
-                "traj_interpolater_type": "LINEAR_POSE",
+                "traj_interpolater_type": "LINEAR_POSE_TWIST",
                 "time_fraction": 0.3,
             }
             logger.warning("field traj_interpolator_cfg not specified!!!")

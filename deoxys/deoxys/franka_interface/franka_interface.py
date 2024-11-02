@@ -9,7 +9,7 @@ import zmq
 
 import deoxys.proto.franka_interface.franka_controller_pb2 as franka_controller_pb2
 import deoxys.proto.franka_interface.franka_robot_state_pb2 as franka_robot_state_pb2
-from deoxys.franka_interface.visualizer import visualizer_factory
+# from deoxys.franka_interface.visualizer import visualizer_factory
 from deoxys.utils import transform_utils
 from deoxys.utils.config_utils import verify_controller_config
 from deoxys.utils.yaml_config import YamlConfig
@@ -26,6 +26,12 @@ def action_to_osc_pose_goal(action, is_delta=True) -> franka_controller_pb2.Goal
     goal.ax = action[3]
     goal.ay = action[4]
     goal.az = action[5]
+    goal.vx = action[6]
+    goal.vy = action[7]
+    goal.vz = action[8]
+    goal.wx = action[9]
+    goal.wy = action[10]
+    goal.wz = action[11]
     return goal
 
 def action_to_cartesian_velocity(action, is_delta=True) -> franka_controller_pb2.Goal:
@@ -60,7 +66,8 @@ TRAJ_INTERPOLATOR_MAPPING = {
     "MIN_JERK_POSE": franka_controller_pb2.FrankaControlMessage.TrajInterpolatorType.MIN_JERK_POSE,
     "MIN_JERK_JOINT_POSITION": franka_controller_pb2.FrankaControlMessage.TrajInterpolatorType.MIN_JERK_JOINT_POSITION,
     "COSINE_CARTESIAN_VELOCITY": franka_controller_pb2.FrankaControlMessage.TrajInterpolatorType.COSINE_CARTESIAN_VELOCITY,
-    "LINEAR_CARTESIAN_VELOCITY": franka_controller_pb2.FrankaControlMessage.TrajInterpolatorType.LINEAR_CARTESIAN_VELOCITY
+    "LINEAR_CARTESIAN_VELOCITY": franka_controller_pb2.FrankaControlMessage.TrajInterpolatorType.LINEAR_CARTESIAN_VELOCITY,
+    "LINEAR_POSE_TWIST": franka_controller_pb2.FrankaControlMessage.TrajInterpolatorType.LINEAR_POSE_TWIST
 }
 
 
@@ -146,8 +153,10 @@ class FrankaInterface:
 
         self.use_visualizer = use_visualizer
         self.visualizer = None
-        if self.use_visualizer:
-            self.visualizer = visualizer_factory(backend="pybullet")
+        # TODO: fix this
+        # if self.use_visualizer:
+        #     self.visualizer = visualizer_factory(backend="pybullet")
+        print("*********************** fix me *************** new franka interace")
 
         self._last_controller_type = "Dummy"
 
@@ -279,8 +288,14 @@ class FrankaInterface:
 
             osc_config.residual_mass_vec[:] = controller_cfg.residual_mass_vec
             osc_msg.config.CopyFrom(osc_config)
+
+            # ************ mod for pose + twist ************
             action[0:3] *= controller_cfg.action_scale.translation
-            action[3 : self.last_gripper_dim] *= controller_cfg.action_scale.rotation
+            action[3:6] *= controller_cfg.action_scale.rotation
+            # TODO: fix the action scale for twist
+            action[6:9] *= controller_cfg.action_scale.translation
+            action[9:12] *= controller_cfg.action_scale.rotation
+            # ************ mod for pose + twist ************
 
             logger.debug(f"OSC action: {np.round(action, 3)}")
 
