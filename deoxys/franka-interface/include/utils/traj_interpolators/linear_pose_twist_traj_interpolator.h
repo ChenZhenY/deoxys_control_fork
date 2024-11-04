@@ -21,12 +21,11 @@ private:
   Eigen::Vector3d twist_trans_start_;
   Eigen::Vector3d twist_trans_goal_;
   Eigen::Vector3d last_twist_trans_t_;
+  Eigen::Vector3d prev_twist_trans_goal_;
 
   Eigen::Vector3d twist_rot_start_;
   Eigen::Vector3d twist_rot_goal_;
   Eigen::Vector3d last_twist_rot_t_;
-
-  Eigen::Vector3d prev_twist_trans_goal_;
   Eigen::Vector3d prev_twist_rot_goal_;
 
   double dt_;
@@ -72,24 +71,27 @@ public:
 
       twist_trans_start_ = twist_trans_start;
       twist_rot_start_ = twist_rot_start;
+
       prev_twist_trans_goal_ = twist_trans_start;
       prev_twist_rot_goal_ = twist_rot_start;
       first_goal_ = false;
-      // std::cout << "First goal" << std::endl;
+      // std::cout << "First goal" << p_start << std::endl;
     } else {
       // If the goal is already set, use prev goal as the starting point of
       // interpolation.
+
       prev_p_goal_ = p_goal_;
       prev_q_goal_ = q_goal_;
 
+      // TODO: this assumes that the trajectory is tracking closely. Could be dangenerous if the robot haven't reach closely to the prev goal.
       p_start_ = prev_p_goal_;
       q_start_ = prev_q_goal_;
 
-      prev_twist_trans_goal_ = twist_trans_goal;
-      prev_twist_rot_goal_ = twist_rot_goal;
+      prev_twist_trans_goal_ = twist_trans_goal_;
+      prev_twist_rot_goal_ = twist_rot_goal_;
 
       twist_trans_start_ = prev_twist_trans_goal_;
-      twist_rot_start_ = prev_twist_rot_goal_;
+      twist_rot_start_ = prev_twist_rot_goal_; 
     }
 
     p_goal_ = p_goal;
@@ -97,6 +99,8 @@ public:
 
     twist_trans_goal_ = twist_trans_goal;
     twist_rot_goal_ = twist_rot_goal;
+
+    // std::cout<<"rrrrrrrrrrrrrset goal"<<p_goal_<<" pstart :" << p_start_<<std::endl;
 
     // Flip the sign if the dot product of quaternions is negative
     if (q_goal_.coeffs().dot(q_start_.coeffs()) < 0.0) {
@@ -124,11 +128,16 @@ public:
       last_twist_trans_t_ = twist_trans_start_ + t * (twist_trans_goal_ - twist_trans_start_);
       last_twist_rot_t_ = twist_rot_start_ + t * (twist_rot_goal_ - twist_rot_start_);
       last_time_ = time_sec;
+
+      // std::cout<<" input time "<< time_sec<<" t_intepolation " <<t<<std::endl;
     }
     p_t = last_p_t_;
     q_t = last_q_t_;
     twist_trans_t = last_twist_trans_t_;
     twist_rot_t = last_twist_rot_t_;
+
+    // std::cout<<"p_tttt "<<p_t<<std::endl;
+    // std::cout<<"p_start"<<p_start_<<" p_goal "<<p_goal_<<std::endl;
   };
 };
 } // namespace traj_utils

@@ -156,7 +156,7 @@ class FrankaInterface:
         # TODO: fix this
         # if self.use_visualizer:
         #     self.visualizer = visualizer_factory(backend="pybullet")
-        print("*********************** fix me *************** new franka interace")
+        print("*********************** initializing franka interace using deoxys_control_fork************")
 
         self._last_controller_type = "Dummy"
 

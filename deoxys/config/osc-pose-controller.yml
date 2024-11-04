@@ -4,14 +4,14 @@ is_delta: false
 
 traj_interpolator_cfg:
   traj_interpolator_type: LINEAR_POSE_TWIST
-  time_fraction: 0.3
+  time_fraction: 0.6
 
 Kp:
-  translation: 150.0
-  rotation: 250.0
+  translation: 45.0 # 15.0 # TODO: 150.0
+  rotation: 75.0 # 25.0 # 250.0
 
 action_scale:
-  translation: 0.05
+  translation: 1.0 # 0.05 TODO: action scale only applies in python, but unchanged in franka_interface.cpp
   rotation: 1.0
 
 residual_mass_vec: [0.0, 0.0, 0.0, 0.0, 0.1, 0.5, 0.5]

@@ -511,8 +511,10 @@ int main(int argc, char **argv) {
 
           global_handler->controller_ptr->ParseMessage(control_msg);
 
+          // Update information to goal_state_info using controller_msg in cotnroller_ptr
           global_handler->controller_ptr->ComputeGoal(current_state_info,
                                                       goal_state_info);
+
           switch (control_command.traj_interpolator_type) {
           case TrajInterpolatorType::LINEAR_POSE:
           case TrajInterpolatorType::LINEAR_POSITION:

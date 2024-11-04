@@ -218,10 +218,14 @@ std::array<double, 7> OSCImpedanceController::Step(
   Eigen::Vector3d vel_error;
   vel_error << desired_twist_trans_EE_in_base_frame - (jacobian_pos * current_dq);
 
-  // TODO: add angular velocity error later
   Eigen::Vector3d ang_vel_error;
   ang_vel_error << desired_twist_rot_EE_in_base_frame - (jacobian_ori * current_dq);
-  ang_vel_error.setZero();
+
+  // std::cout<<"position error in controller step: "<<pos_error<<std::endl;
+  // std::cout<<"desired_pos_EE_in_base_frame "<<desired_pos_EE_in_base_frame << "pos_EE_base"<<pos_EE_in_base_frame<<std::endl;
+  // std::cout<<"desired twist " << desired_twist_trans_EE_in_base_frame <<std::endl;
+  // assert((ddesired_pos_EE_in_base_frameesired_twist_trans_EE_in_base_frame.norm() < 1e-8) && "Desired translational twist cannot be zero");
+  // assert((desired_twist_rot_EE_in_base_frame.norm() < 1e-8) && "Desired rotational twist cannot be zero");
   // ************************************************* //
 
   // Compute matrices
@@ -255,10 +259,10 @@ std::array<double, 7> OSCImpedanceController::Step(
 
   tau_d << jacobian_pos.transpose() *
                    (Lambda_pos *
-                    (Kp_p * pos_error - Kd_p * vel_error)) +
+                    (Kp_p * pos_error + Kd_p * vel_error)) +
                jacobian_ori.transpose() *
                    (Lambda_ori *
-                    (Kp_r * ori_error - Kd_r * ang_vel_error));
+                    (Kp_r * ori_error + Kd_r * ang_vel_error));
 
   // nullspace control
   tau_d << tau_d + Nullspace * (static_q_task_ - current_q);

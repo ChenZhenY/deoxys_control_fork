@@ -64,6 +64,33 @@ def parse_args():
     return parser.parse_args()
 
 
+def linear_velocity_approx(traj: np.ndarray, dt: float=1.0, max_vel: float=0.8):
+    """
+    A simple velocity approximation
+    v(t) = [s(t+1)-s(t-1)] / 2
+
+    Input x,y,z position = np.array Tx3
+    scale: when accelerated, set the scale. E.g. 20Hz->60Hz replay, then scale=3.0
+    Output x,y,z velocity = np.array Tx3
+    """
+    vel = np.zeros_like(traj, dtype=np.float64)
+
+    time_len, coordinate = vel.shape
+    if coordinate!=3:
+        raise ValueError("Input shape should be 3 with x,y,z")
+    if time_len<3:
+        raise ValueError("Traj seq too short")
+    if dt <= 1e-4:
+        raise ValueError("dt too small")
+
+    vel[1:-1, :] = (traj[2:,:]-traj[:-2, :]) * 0.5 / dt
+
+    print("max: ", np.max(np.abs(vel)))
+    if np.any(np.abs(vel) > max_vel):
+        raise ValueError("vel too large") 
+    return vel
+
+
 def main():
 
     args = parse_args()
@@ -94,6 +121,18 @@ def main():
         else:
             action_sequence = demo_file['data/demo_0/chunk_0/action_absolute']
 
+
+    ################## TEST #################
+    # for action in action_sequence[:6]:
+    #     print(0.05*np.array(action))
+    # action_test = action_sequence
+    xyz_traj = np.array(action_sequence)[:,:3]
+    # xyz_traj = np.array([[1,2,3], [2,3,4], [4,5,6], [9,9,9]])
+    xyz_vel  = linear_velocity_approx(xyz_traj, dt= 1/args.control_freq) # TODO: change freq here
+    # print("xyz traj: ", xyz_traj[:10], "xzy_vel: ", xyz_vel[:10])
+    # assert False
+    # ######################################
+
     # Initialize franka interface
     device = SpaceMouse(vendor_id=args.vendor_id, product_id=args.product_id)
     device.start_control()
@@ -110,10 +149,13 @@ def main():
     if "OSC" in config["controller_type"]:
         logger.info("Start replay recorded actions using a OSC-family controller")
 
-        for action in action_sequence:
+        counter = 0
+        for action_pos, action_linear_vel in zip(action_sequence, xyz_vel.tolist()):
             # TODO: for testing, add gripper, add twist later
-            gripper = action[6:]
-            action = np.concatenate((action[:6], np.zeros(6)))
+            gripper = action_pos[6:]
+            # action = np.concatenate((action_pos[:6], np.zeros(6))) # no twist
+            action = np.concatenate((action_pos[:6], action_linear_vel, np.zeros(3)))
+            # print("actions: ", np.round(action[:9], decimals=3))
 
             data['joint_states'].append(np.array(robot_interface.last_q))
             data['ee_states'].append(np.array(robot_interface._state_buffer[-1].O_T_EE))
@@ -124,6 +166,9 @@ def main():
                 action=action,
                 controller_cfg=EasyDict(config["controller_cfg"]),
             )
+            counter += 1
+            # if counter > 20:
+            #     break
 
     elif config["controller_type"] == "JOINT_IMPEDANCE":
         logger.info("Start replay recorded actions using Joint Impedence Controller.")
@@ -138,7 +183,7 @@ def main():
         return
     folder = os.path.dirname(args.dataset)
     controller_type = config["controller_type"]
-    save_path = f"{folder}/{controller_type}_{control_freq}HZ_replay_trajecotry_1030.hdf5"
+    save_path = f"{folder}/{controller_type}_{control_freq}HZ_with_vel_tracking_replay_trajecotry_1103.hdf5"
     with h5py.File(save_path, "w") as h5py_file: # TODO: change name accordingly
         config_dict = {
             "controller_cfg": EasyDict(config["controller_cfg"]),
